@@ -1,0 +1,51 @@
+- hosts: localhost
+  vars_files:
+    - credentials.yml
+  tasks:
+    - name: Get all NS records
+      hosttech_dns:
+        state: get
+        zone: amuq.net
+        record: 'amuq.net'
+        type: NS
+        hosttech_username: '{{ hosttech_username }}'
+        hosttech_password: '{{ hosttech_password }}'
+      register: result
+
+    - debug: var=result
+
+    - name: Get test record
+      hosttech_dns:
+        state: get
+        zone: amuq.net
+        record: 'test-123.amuq.net'
+        type: A
+        hosttech_username: '{{ hosttech_username }}'
+        hosttech_password: '{{ hosttech_password }}'
+      register: rec
+
+    - debug: var=rec
+
+    - name: Create test record
+      hosttech_dns:
+        state: present
+        zone: amuq.net
+        record: 'test-123.amuq.net'
+        type: A
+        ttl: 300
+        value: '1.2.3.4,1.2.3.5,1.2.3.6'
+        overwrite: true
+        hosttech_username: '{{ hosttech_username }}'
+        hosttech_password: '{{ hosttech_password }}'
+
+    - name: Delete test record if it was there before
+      hosttech_dns:
+        state: absent
+        zone: amuq.net
+        record: "{{ rec.set.record }}"
+        ttl: "{{ rec.set.ttl }}"
+        type: "{{ rec.set.type }}"
+        value: "{{ rec.set.value }}"
+        hosttech_username: '{{ hosttech_username }}'
+        hosttech_password: '{{ hosttech_password }}'
+      when: rec.set
