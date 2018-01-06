@@ -1046,7 +1046,7 @@ def run_module():
     values = []
     value_in = module.params.get('value')
     for value in value_in:
-        if type_in == 'MX':
+        if type_in in {'PTR', 'MX'}:
             priority, value = value.split(' ', 1)
             values.append((int(priority), value))
         else:
