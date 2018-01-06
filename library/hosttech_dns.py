@@ -72,7 +72,7 @@ author:
 
 EXAMPLES = '''
 # Add new.foo.com as an A record with 3 IPs
-- route53:
+- hosttech_dns:
       state: present
       zone: foo.com
       record: new.foo.com
@@ -83,7 +83,7 @@ EXAMPLES = '''
       hosttech_password: bar
 
 # Update new.foo.com as an A record with a list of 3 IPs
-- route53:
+- hosttech_dns:
       state: present
       zone: foo.com
       record: new.foo.com
@@ -97,7 +97,7 @@ EXAMPLES = '''
       hosttech_password: bar
 
 # Retrieve the details for new.foo.com
-- route53:
+- hosttech_dns:
       state: get
       zone: foo.com
       record: new.foo.com
@@ -107,7 +107,7 @@ EXAMPLES = '''
   register: rec
 
 # Delete new.foo.com A record using the results from the get command
-- route53:
+- hosttech_dns:
       state: absent
       zone: foo.com
       record: "{{ rec.set.record }}"
@@ -119,7 +119,7 @@ EXAMPLES = '''
 
 # Add an AAAA record.  Note that because there are colons in the value
 # that the IPv6 address must be quoted.
-- route53:
+- hosttech_dns:
       state: present
       zone: foo.com
       record: localhost.foo.com
@@ -129,27 +129,39 @@ EXAMPLES = '''
       hosttech_username: foo
       hosttech_password: bar
 
-# Add a SRV record with multiple fields for a service on port 22222
-# For more information on SRV records see:
-# https://en.wikipedia.org/wiki/SRV_record
-- route53:
-      state: present
-      zone: foo.com
-      record: "_example-service._tcp.foo.com"
-      type: SRV
-      value: "0 0 22222 host1.foo.com,0 0 22222 host2.foo.com"
-      hosttech_username: foo
-      hosttech_password: bar
-
-# Add a TXT record. Note that TXT and SPF records must be surrounded
-# by quotes when sent to Route 53:
-- route53:
+# Add a TXT record.
+- hosttech_dns:
       state: present
       zone: foo.com
       record: localhost.foo.com
       type: TXT
       ttl: 7200
-      value: '"bar"'
+      value: 'bar'
+      hosttech_username: foo
+      hosttech_password: bar
+
+# Add a CAA record.
+- hosttech_dns:
+      state: present
+      zone: foo.com
+      record: foo.com
+      type: CAA
+      ttl: 3600
+      value:
+      - "128 issue letsencrypt.org"
+      - "128 iodef mailto:webmaster@foo.com"
+      hosttech_username: foo
+      hosttech_password: bar
+
+# Add an MX record.
+- hosttech_dns:
+      state: present
+      zone: foo.com
+      record: foo.com
+      type: MX
+      ttl: 3600
+      value:
+      - "10 mail.foo.com"
       hosttech_username: foo
       hosttech_password: bar
 
