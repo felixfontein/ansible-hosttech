@@ -1030,19 +1030,28 @@ def run_module():
             set=data,
         )
 
+    # Parse records
+    values = []
+    value_in = module.params.get('value')
+    for value in value_in:
+        if type_in == 'MX':
+            priority, value = value.split(' ', 1)
+            values.append((int(priority), value))
+        else:
+            values.append((None, value))
+
     # Compare records
     ttl_in = module.params.get('ttl')
-    value_in = module.params.get('value')
     mismatch = False
     mismatch_records = []
-    values = list(value_in)
     for record in records:
         if record.ttl != ttl_in:
             mismatch = True
             mismatch_records.append(record)
             continue
-        if record.target in values:
-            values.remove(record.target)
+        val = (record.priority, record.target)
+        if val in values:
+            values.remove(val)
         else:
             mismatch = True
             mismatch_records.append(record)
@@ -1069,7 +1078,7 @@ def run_module():
                 do_create = False
         else:
             do_create = True
-        for value in values:
+        for priority, target in values:
             if to_delete:
                 # If there's a record to delete, change it to new record
                 record = to_delete.pop()
@@ -1081,9 +1090,9 @@ def run_module():
             record.prefix = prefix
             record.type = type_in
             record.ttl = ttl_in
-            record.target = value
+            record.priority = priority
+            record.target = target
     if module.params.get('state') == 'absent':
-        values = list(value_in)
         if not mismatch:
             to_delete.extend(records)
 
