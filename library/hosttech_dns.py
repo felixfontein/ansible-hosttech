@@ -165,6 +165,54 @@ EXAMPLES = '''
       hosttech_username: foo
       hosttech_password: bar
 
+# Add a CNAME record.
+- hosttech_dns:
+      state: present
+      zone: bla.foo.com
+      record: foo.com
+      type: CNAME
+      ttl: 3600
+      value:
+      - foo.foo.com
+      hosttech_username: foo
+      hosttech_password: bar
+
+# Add a PTR record.
+- hosttech_dns:
+      state: present
+      zone: foo.foo.com
+      record: foo.com
+      type: PTR
+      ttl: 3600
+      value:
+      - foo.foo.com
+      hosttech_username: foo
+      hosttech_password: bar
+
+# Add an SPF record.
+- hosttech_dns:
+      state: present
+      zone: foo.com
+      record: foo.com
+      type: SPF
+      ttl: 3600
+      value:
+      - "v=spf1 a mx ~all"
+      hosttech_username: foo
+      hosttech_password: bar
+
+# Add a PTR record.
+- hosttech_dns:
+      state: present
+      zone: foo.com
+      record: foo.com
+      type: PTR
+      ttl: 3600
+      value:
+      - "10 100 3333 service.foo.com"
+      hosttech_username: foo
+      hosttech_password: bar
+
 '''
 
 RETURN = '''
