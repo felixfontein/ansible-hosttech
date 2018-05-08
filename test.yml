@@ -3,8 +3,7 @@
     - credentials.yml
   tasks:
     - name: Get all NS records
-      hosttech_dns:
-        state: get
+      hosttech_dns_record_facts:
         zone: amuq.net
         record: 'amuq.net'
         type: NS
@@ -15,8 +14,7 @@
     - debug: var=result
 
     - name: Get test record
-      hosttech_dns:
-        state: get
+      hosttech_dns_record_facts:
         zone: amuq.net
         record: 'test-123.amuq.net'
         type: A
@@ -27,7 +25,7 @@
     - debug: var=rec
 
     - name: Create test record
-      hosttech_dns:
+      hosttech_dns_record:
         state: present
         zone: amuq.net
         record: 'test-123.amuq.net'
@@ -39,7 +37,7 @@
         hosttech_password: '{{ hosttech_password }}'
 
     - name: Delete test record if it was there before
-      hosttech_dns:
+      hosttech_dns_record:
         state: absent
         zone: amuq.net
         record: "{{ rec.set.record }}"

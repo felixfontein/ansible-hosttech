@@ -1,261 +1,19 @@
-#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
 # Copyright (c) 2017-2018 Felix Fontein
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# Simplified BSD License (see licenses/simplified_bsd.txt or https://opensource.org/licenses/BSD-2-Clause)
 
 from __future__ import (absolute_import, division, print_function)
-__metaclass__ = type
 
-ANSIBLE_METADATA = {
-    'metadata_version': '1.1',
-    'status': ['stableinterface'],
-    'supported_by': 'community'
-}
-
-DOCUMENTATION = '''
----
-module: hosttech_dns
-
-short_description: add or delete entries in Hosttech DNS service
-
-version_added: "2.x"
-
-description:
-    - "Creates and deletes DNS records in Hosttech DNS service U(https://ns1.hosttech.eu/public/api?wsdl)."
-
-options:
-    state:
-        description:
-        - Specifies the state of the resource record.
-        required: true
-        choices: ['present', 'absent', 'get']
-    zone:
-        description:
-        - The DNS zone to modify
-        required: true
-    record:
-        description:
-        - The full DNS record to create or delete
-        required: true
-    ttl:
-        description:
-        - The TTL to give the new record
-        required: false
-        default: 3600 (one hour)
-    type:
-        description:
-        - The type of DNS record to create
-        required: true
-        choices: ['A', 'CNAME', 'MX', 'AAAA', 'TXT', 'PTR', 'SRV', 'SPF', 'NS', 'CAA']
-    value:
-        description:
-        - The new value when creating a DNS record.  YAML lists or multiple comma-spaced values are allowed for non-alias records.
-        - When deleting a record all values for the record must be specified or it will not be deleted.
-        required: false
-        default: null
-    overwrite:
-        description:
-        - Whether an existing record should be overwritten on create if values do not match
-        required: false
-        default: null
-    hosttech_username:
-        description:
-        - The username for the Hosttech API user
-        required: true
-    hosttech_password:
-        description:
-        - The password for the Hosttech API user
-        required: true
-
-author:
-    - Felix Fontein (@felixfontein)
-'''
-
-EXAMPLES = '''
-# Add new.foo.com as an A record with 3 IPs
-- hosttech_dns:
-      state: present
-      zone: foo.com
-      record: new.foo.com
-      type: A
-      ttl: 7200
-      value: 1.1.1.1,2.2.2.2,3.3.3.3
-      hosttech_username: foo
-      hosttech_password: bar
-
-# Update new.foo.com as an A record with a list of 3 IPs
-- hosttech_dns:
-      state: present
-      zone: foo.com
-      record: new.foo.com
-      type: A
-      ttl: 7200
-      value:
-        - 1.1.1.1
-        - 2.2.2.2
-        - 3.3.3.3
-      hosttech_username: foo
-      hosttech_password: bar
-
-# Retrieve the details for new.foo.com
-- hosttech_dns:
-      state: get
-      zone: foo.com
-      record: new.foo.com
-      type: A
-      hosttech_username: foo
-      hosttech_password: bar
-  register: rec
-
-# Delete new.foo.com A record using the results from the get command
-- hosttech_dns:
-      state: absent
-      zone: foo.com
-      record: "{{ rec.set.record }}"
-      ttl: "{{ rec.set.ttl }}"
-      type: "{{ rec.set.type }}"
-      value: "{{ rec.set.value }}"
-      hosttech_username: foo
-      hosttech_password: bar
-
-# Add an AAAA record.  Note that because there are colons in the value
-# that the IPv6 address must be quoted.
-- hosttech_dns:
-      state: present
-      zone: foo.com
-      record: localhost.foo.com
-      type: AAAA
-      ttl: 7200
-      value: "::1"
-      hosttech_username: foo
-      hosttech_password: bar
-
-# Add a TXT record.
-- hosttech_dns:
-      state: present
-      zone: foo.com
-      record: localhost.foo.com
-      type: TXT
-      ttl: 7200
-      value: 'bar'
-      hosttech_username: foo
-      hosttech_password: bar
-
-# Add a CAA record.
-- hosttech_dns:
-      state: present
-      zone: foo.com
-      record: foo.com
-      type: CAA
-      ttl: 3600
-      value:
-      - "128 issue letsencrypt.org"
-      - "128 iodef mailto:webmaster@foo.com"
-      hosttech_username: foo
-      hosttech_password: bar
-
-# Add an MX record.
-- hosttech_dns:
-      state: present
-      zone: foo.com
-      record: foo.com
-      type: MX
-      ttl: 3600
-      value:
-      - "10 mail.foo.com"
-      hosttech_username: foo
-      hosttech_password: bar
-
-# Add a CNAME record.
-- hosttech_dns:
-      state: present
-      zone: bla.foo.com
-      record: foo.com
-      type: CNAME
-      ttl: 3600
-      value:
-      - foo.foo.com
-      hosttech_username: foo
-      hosttech_password: bar
-
-# Add a PTR record.
-- hosttech_dns:
-      state: present
-      zone: foo.foo.com
-      record: foo.com
-      type: PTR
-      ttl: 3600
-      value:
-      - foo.foo.com
-      hosttech_username: foo
-      hosttech_password: bar
-
-# Add an SPF record.
-- hosttech_dns:
-      state: present
-      zone: foo.com
-      record: foo.com
-      type: SPF
-      ttl: 3600
-      value:
-      - "v=spf1 a mx ~all"
-      hosttech_username: foo
-      hosttech_password: bar
-
-# Add a PTR record.
-- hosttech_dns:
-      state: present
-      zone: foo.com
-      record: foo.com
-      type: PTR
-      ttl: 3600
-      value:
-      - "10 100 3333 service.foo.com"
-      hosttech_username: foo
-      hosttech_password: bar
-
-'''
-
-RETURN = '''
-set:
-    description: The fetched record, when I(state) is I(get). Is empty if record doesn't exist.
-    returned: on successful get
-    type: complex
-    contains:
-        record:
-            description: The record name
-            type: string
-            sample: sample.example.com
-        type:
-            description: The DNS record type
-            type: string
-            sample: A
-        ttl:
-            description: The TTL
-            type: int
-            sample: 3600
-        value:
-            description: The DNS record
-            type: list
-            sample:
-            - 1.2.3.4
-            - 1.2.3.5
-'''
 
 try:
     import lxml.etree
-    HAS_LXML_ETREE=True
+    HAS_LXML_ETREE = True
 except:
-    HAS_LXML_ETREE=False
+    HAS_LXML_ETREE = False
 
-import sys
-
-if sys.version_info.major < 3:
-    from urllib2 import urlopen, Request, HTTPError
-else:
-    from urllib.request import urlopen, Request
-    from urllib.error import HTTPError
-
-from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils._text import to_native
+from ansible.module_utils.urls import open_url, urllib_error, NoSSLError, ConnectionError
 
 
 # ##########################################################################################################
@@ -264,6 +22,10 @@ from ansible.module_utils.basic import AnsibleModule
 
 
 class WSDLException(Exception):
+    pass
+
+
+class WSDLNetworkError(WSDLException):
     pass
 
 
@@ -473,16 +235,22 @@ class Composer(object):
 
     def execute(self, debug=False):
         payload = b'''<?xml version='1.0' encoding='utf-8'?>''' + b'\n' + lxml.etree.tostring(self._root)
-        req = Request(self._api, payload, {'Content-Type': 'application/xml', 'Content-Length': len(payload)})
-        req.get_method = lambda: 'POST'
         try:
-            f = urlopen(req, timeout=300)  # 5 minute timeout
-            result = f.read()
-            code = f.getcode()
-            f.close()
-        except HTTPError as e:
-            result = e.read()
-            code = e.getcode()
+            req = open_url(self._api, data=payload, method='POST', timeout=300,
+                           headers={'Content-Type': 'application/xml', 'Content-Length': str(len(payload))})
+            result = req.read()
+            code = req.code
+            req.close()
+        except urllib_error.HTTPError as e:
+            try:
+                result = e.read()
+            except AttributeError:
+                result = ''
+            code = e.code
+        except NoSSLError as e:
+            raise WSDLNetworkError('Cannot connect via SSL: {0}'.format(to_native(e)))
+        except (ConnectionError, ValueError) as e:
+            raise WSDLNetworkError('Connection error: {0}'.format(to_native(e)))
         if debug:
             print('Result: {0}, content: {1}'.format(code, result.decode('utf-8')))
         if code < 200 or code >= 300:
@@ -679,7 +447,7 @@ class HostTechAPI(object):
         return command
 
     def _announce(self, msg):
-        print('==== {0} ===================================================================================='.format(msg))
+        print('{0} {1} {2}'.format('=' * 4, msg, '=' * 40))
 
     def _execute(self, command, result_name, acceptable_types):
         if self._debug:
@@ -933,7 +701,7 @@ class HostTechAPI(object):
 
     def change_ip(self, from_ip, to_ip):
         """
-        Replace an ip in all records of a user.
+        Replace an IP in all records of a user.
 
         @param from_ip: IP address to change (string)
         @param to_ip: new IP address to change to (string)
@@ -1010,177 +778,3 @@ class HostTechAPI(object):
         except WSDLError as e:
             # FIXME
             raise
-
-
-# ##########################################################################################################
-# # Ansible module #########################################################################################
-# ##########################################################################################################
-
-
-def run_module():
-    module_args = dict(
-        state=dict(type='str', choices=['present', 'absent', 'get'], required=True),
-        zone=dict(type='str', required=True),
-        record=dict(type='str', required=True),
-        ttl=dict(required=False, type='int', default=3600),
-        type=dict(choices=['A', 'CNAME', 'MX', 'AAAA', 'TXT', 'PTR', 'SRV', 'SPF', 'NS', 'CAA'], required=True),
-        value=dict(required=False, type='list', default=[]),
-        overwrite=dict(required=False, type='bool'),
-        hosttech_username=dict(type='str', required=True),
-        hosttech_password=dict(type='str', required=True, no_log=True),
-    )
-    required_if = [('state', 'present', ['value']), ('state', 'absent', ['value'])]
-    module = AnsibleModule(argument_spec=module_args, required_if=required_if, supports_check_mode=True)
-
-    if not HAS_LXML_ETREE:
-        module.fail_json(msg='Needs lxml Python module (pip install lxml)')
-
-    # Get zone and record.
-    zone_in = module.params.get('zone').lower()
-    record_in = module.params.get('record').lower()
-    if zone_in[-1:] == '.':
-        zone_in = zone_in[:-1]
-    if record_in[-1:] == '.':
-        record_in = record_in[:-1]
-
-    # Convert record to prefix
-    if not record_in.endswith('.' + zone_in) and record_in != zone_in:
-        module.fail_json(msg='Record must be in zone')
-    if record_in == zone_in:
-        prefix = None
-    else:
-        prefix = record_in[:len(record_in) - len(zone_in) - 1]
-
-    # Create API and get zone information
-    api = HostTechAPI(module.params.get('hosttech_username'), module.params.get('hosttech_password'), debug=False)
-    try:
-        zone = api.get_zone(zone_in)
-        if zone is None:
-            module.fail_json(msg='Zone not found')
-    except HostTechAPIAuthError as e:
-        module.fail_json(msg='Cannot authenticate', error=e.message)
-    except HostTechAPIError as e:
-        module.fail_json(msg='Internal error (API level)', error=e.message)
-    except WSDLException as e:
-        module.fail_json(msg='Internal error (WSDL level)', error=e.message)
-
-    # Find matching records
-    type_in = module.params.get('type')
-    records = []
-    for record in zone.records:
-        if record.prefix == prefix and record.type == type_in:
-            records.append(record)
-
-    # Process get
-    if module.params.get('state') == 'get':
-        if records:
-            ttls = {record.ttl for record in records},
-            data = {
-                'record': record_in,
-                'type': type_in,
-                'ttl': min(*ttls),
-                'value': [record.target for record in records],
-            }
-            if len(ttls) > 1:
-                data['ttls'] = ttls
-        else:
-            data = {}
-        module.exit_json(
-            changed=False,
-            set=data,
-        )
-
-    # Parse records
-    values = []
-    value_in = module.params.get('value')
-    for value in value_in:
-        if type_in in {'PTR', 'MX'}:
-            priority, value = value.split(' ', 1)
-            values.append((int(priority), value))
-        else:
-            values.append((None, value))
-
-    # Compare records
-    ttl_in = module.params.get('ttl')
-    mismatch = False
-    mismatch_records = []
-    for record in records:
-        if record.ttl != ttl_in:
-            mismatch = True
-            mismatch_records.append(record)
-            continue
-        val = (record.priority, record.target)
-        if val in values:
-            values.remove(val)
-        else:
-            mismatch = True
-            mismatch_records.append(record)
-            continue
-    if values:
-        mismatch = True
-
-    # Determine what to do
-    to_create = []
-    to_delete = []
-    to_change = []
-    if module.params.get('state') == 'present':
-        do_create = False
-        if records:
-            if mismatch:
-                # Mismatch: user wants to overwrite?
-                if module.params.get('overwrite'):
-                    do_create = True
-                    to_delete.extend(mismatch_records)
-                else:
-                    module.fail_json(msg="Record already exists with different value. Set 'overwrite' to replace it")
-            else:
-                # No mismatch: don't create
-                do_create = False
-        else:
-            do_create = True
-        for priority, target in values:
-            if to_delete:
-                # If there's a record to delete, change it to new record
-                record = to_delete.pop()
-                to_change.append(record)
-            else:
-                # Otherwise create new record
-                record = DNSRecord()
-                to_create.append(record)
-            record.prefix = prefix
-            record.type = type_in
-            record.ttl = ttl_in
-            record.priority = priority
-            record.target = target
-    if module.params.get('state') == 'absent':
-        if not mismatch:
-            to_delete.extend(records)
-
-    # Is there nothing to change?
-    if len(to_create) == 0 and len(to_delete) == 0 and len(to_change) == 0:
-        module.exit_json(changed=False)
-
-    # Actually do something
-    if not module.check_mode:
-        try:
-            for record in to_delete:
-                api.delete_record(record)
-            for record in to_change:
-                api.update_record(record)
-            for record in to_create:
-                api.add_record(zone_in, record)
-        except HostTechAPIAuthError as e:
-            module.fail_json(msg='Cannot authenticate', error=e.message)
-        except HostTechAPIError as e:
-            module.fail_json(msg='Internal error (API level)', error=e.message)
-        except WSDLException as e:
-            module.fail_json(msg='Internal error (WSDL level)', error=e.message)
-    module.exit_json(changed=True)
-
-
-def main():
-    run_module()
-
-
-if __name__ == '__main__':
-    main()
